@@ -96,6 +96,23 @@ const INITIAL_MACHINES = [
   },
 ];
 
+const CONFIGURATION_OPTIONS = [
+  {
+    key: "retrofit",
+    label: "Retrofit",
+    description: "Upgrade existing machine",
+  },
+  {
+    key: "plc",
+    label: "PLC",
+    description: "Connect to PLC system",
+  },
+];
+
+function configLabel(key) {
+  return { retrofit: "Retrofit", plc: "PLC" }[key] || "—";
+}
+
 function vibrationTone(v) {
   if (v >= 6) return "bad";
   if (v >= 4.5) return "warn";
@@ -124,7 +141,13 @@ export default function Carding() {
   const [machines, setMachines] = useState(INITIAL_MACHINES);
   const [selectedId, setSelectedId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [form, setForm] = useState({ name: "", manufacturer: "", energy: "", power: "" });
+  const [form, setForm] = useState({
+    machineId: "",
+    name: "",
+    location: "",
+    description: "",
+    configuration: "",
+  });
   const [detailMachine, setDetailMachine] = useState(null);
   const [show3D, setShow3D] = useState(false);
 
@@ -149,24 +172,26 @@ export default function Carding() {
 
   function handleAddMachine(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.manufacturer.trim() || !form.energy || !form.power) return;
+    if (!form.machineId.trim() || !form.name.trim() || !form.location.trim() || !form.configuration) return;
     const newMachine = {
-      id: `m${Date.now()}`,
+      id: form.machineId.trim(),
+      machineId: form.machineId.trim(),
       name: form.name.trim(),
-      manufacturer: form.manufacturer.trim(),
-      energy: Number(form.energy),
-      power: Number(form.power),
+      manufacturer: "—",
+      energy: 0,
+      power: 0,
       lastService: "",
       nextService: "",
       totalEnergy: 0,
       status: "Active",
-      location: "Unassigned",
+      location: form.location.trim(),
       operator: "Unassigned",
       efficiency: 0,
-      notes: "Newly added — pending first service log.",
+      configuration: form.configuration,
+      notes: form.description.trim() || "Newly added — pending first service log.",
     };
     setMachines((prev) => [...prev, newMachine]);
-    setForm({ name: "", manufacturer: "", energy: "", power: "" });
+    setForm({ machineId: "", name: "", location: "", description: "", configuration: "" });
     setShowAddForm(false);
   }
 
@@ -259,7 +284,7 @@ export default function Carding() {
           position: fixed; inset: 0; background: rgba(31,61,46,0.35); z-index: 20;
           display: flex; align-items: center; justify-content: center; padding: 20px;
         }
-        .cd-form-panel { width: 100%; max-width: 380px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+        .cd-form-panel { width: 100%; max-width: 380px; max-height: 88vh; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
         .cd-form-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 600; }
         .cd-form-field { display: flex; flex-direction: column; gap: 4px; }
         .cd-form-field label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); }
@@ -268,11 +293,38 @@ export default function Carding() {
           padding: 8px 10px; font-size: 12.5px; color: var(--ink-primary); outline: none;
         }
         .cd-form-field input:focus { border-color: var(--gold); }
+        .cd-form-field textarea {
+          background: #fffdf7; border: 1px solid var(--border-soft); border-radius: 8px;
+          padding: 8px 10px; font-size: 12.5px; color: var(--ink-primary); outline: none;
+          font-family: inherit; resize: vertical;
+        }
+        .cd-form-field textarea:focus { border-color: var(--gold); }
+        .cd-config-options { display: flex; flex-direction: column; gap: 8px; }
+        .cd-config-option {
+          all: unset; box-sizing: border-box;
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 10px;
+          background: #fffdf7; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+        }
+        .cd-config-option:hover { border-color: var(--sage); }
+        .cd-config-option.selected { border-color: var(--forest); background: rgba(31,61,46,0.06); }
+        .cd-config-radio {
+          width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-soft);
+          flex-shrink: 0; position: relative; transition: border-color 0.15s;
+        }
+        .cd-config-option.selected .cd-config-radio { border-color: var(--forest); }
+        .cd-config-option.selected .cd-config-radio::after {
+          content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--forest);
+        }
+        .cd-config-text { display: flex; flex-direction: column; gap: 1px; }
+        .cd-config-label { font-size: 12.5px; font-weight: 700; color: var(--ink-primary); }
+        .cd-config-desc { font-size: 11px; color: var(--ink-muted); }
         .cd-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
         .cd-btn-primary {
           background: var(--forest); border: none; border-radius: 8px; color: var(--oat);
           font-size: 12.5px; font-weight: 600; padding: 9px 16px; cursor: pointer;
         }
+        .cd-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
         .cd-btn-secondary {
           background: transparent; border: 1px solid var(--border-soft); border-radius: 8px; color: var(--ink-muted);
           font-size: 12.5px; font-weight: 600; padding: 9px 16px; cursor: pointer;
@@ -367,6 +419,7 @@ export default function Carding() {
         .cd-table .cd-name-cell { font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
         .cd-table .cd-notes-cell { max-width: 220px; color: var(--ink-muted); }
         .cd-badge { font-size: 10px; padding: 3px 9px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+        .cd-config-badge { color: var(--forest); background: rgba(201,168,106,0.2); border: 1px solid rgba(201,168,106,0.5); }
 
         @media (max-width: 700px) {
           .cd-header-row { flex-direction: column; align-items: flex-start; }
@@ -450,6 +503,15 @@ export default function Carding() {
           <form className="panel cd-form-panel" onClick={(e) => e.stopPropagation()} onSubmit={handleAddMachine}>
             <div className="cd-form-title">Add Machine</div>
             <div className="cd-form-field">
+              <label>Machine ID</label>
+              <input
+                value={form.machineId}
+                onChange={(e) => setForm((f) => ({ ...f, machineId: e.target.value }))}
+                placeholder="e.g. M-2026-014"
+                required
+              />
+            </div>
+            <div className="cd-form-field">
               <label>Machine Name</label>
               <input
                 value={form.name}
@@ -459,37 +521,48 @@ export default function Carding() {
               />
             </div>
             <div className="cd-form-field">
-              <label>Manufacturer</label>
+              <label>Machine Location</label>
               <input
-                value={form.manufacturer}
-                onChange={(e) => setForm((f) => ({ ...f, manufacturer: e.target.value }))}
-                placeholder="e.g. TexFab Corp"
+                value={form.location}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                placeholder="e.g. Carding Bay 2"
                 required
               />
             </div>
             <div className="cd-form-field">
-              <label>Energy Consumption (kWh/day)</label>
-              <input
-                type="number"
-                value={form.energy}
-                onChange={(e) => setForm((f) => ({ ...f, energy: e.target.value }))}
-                placeholder="e.g. 350"
-                required
+              <label>Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Optional notes about this machine"
+                rows={3}
               />
             </div>
             <div className="cd-form-field">
-              <label>Power Rating (kW)</label>
-              <input
-                type="number"
-                value={form.power}
-                onChange={(e) => setForm((f) => ({ ...f, power: e.target.value }))}
-                placeholder="e.g. 15"
-                required
-              />
+              <label>Configuration</label>
+              <div className="cd-config-options">
+                {CONFIGURATION_OPTIONS.map((opt) => (
+                  <button
+                    type="button"
+                    key={opt.key}
+                    className={`cd-config-option ${form.configuration === opt.key ? "selected" : ""}`}
+                    onClick={() => setForm((f) => ({ ...f, configuration: opt.key }))}
+                    aria-pressed={form.configuration === opt.key}
+                  >
+                    <span className="cd-config-radio" />
+                    <span className="cd-config-text">
+                      <span className="cd-config-label">{opt.label}</span>
+                      <span className="cd-config-desc">{opt.description}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="cd-form-actions">
               <button type="button" className="cd-btn-secondary" onClick={() => setShowAddForm(false)}>Cancel</button>
-              <button type="submit" className="cd-btn-primary">Add Machine</button>
+              <button type="submit" className="cd-btn-primary" disabled={!form.machineId.trim() || !form.name.trim() || !form.location.trim() || !form.configuration}>
+                Add Machine
+              </button>
             </div>
           </form>
         </div>
@@ -571,6 +644,7 @@ export default function Carding() {
               <th>Next Service Date</th>
               <th>Total Energy Consumed</th>
               <th>Power Rating</th>
+              <th>Configuration</th>
               <th>Status</th>
               <th>Location</th>
               <th>Operator</th>
@@ -590,6 +664,13 @@ export default function Carding() {
                   <td className="mono">{formatDate(m.nextService)}</td>
                   <td className="mono">{m.totalEnergy ? `${m.totalEnergy.toLocaleString()} kWh` : "—"}</td>
                   <td className="mono">{m.power} kW</td>
+                  <td>
+                    {m.configuration ? (
+                      <span className="cd-badge cd-config-badge">{configLabel(m.configuration)}</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td>
                     <span
                       className="cd-badge"

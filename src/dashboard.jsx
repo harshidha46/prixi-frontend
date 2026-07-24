@@ -18,7 +18,25 @@ const COPY = {
     placeholder: "Ask PRIXI…",
     send: "Send",
     sectorsLabel: "Factory Sectors",
+    addSector: "Add Sector",
     sectorTag: "Sector",
+    addSectorModalTitle: "New Sector",
+    addSectorModalSub: "Tell us about the factory before we set up the sector.",
+    industryName: "Industry Name",
+    industryNamePh: "e.g. Leafora Textiles",
+    factoryName: "Factory Name",
+    factoryNamePh: "e.g. Unit 3 — Coimbatore",
+    factoryLocation: "Factory Location",
+    factoryLocationPh: "e.g. Coimbatore, Tamil Nadu",
+    industryType: "Industry Type",
+    industryTypePh: "Select industry type",
+    industryTypes: ["Textile", "Food Processing", "Pharmaceuticals", "Automotive", "Chemicals", "Electronics", "Other"],
+    logoUpload: "Factory Logo",
+    logoUploadHint: "PNG or JPG, up to 5MB",
+    logoChange: "Change logo",
+    logoRemove: "Remove",
+    cancel: "Cancel",
+    next: "Next",
     alerts: "Alerts",
     inventory: "Inventory",
     energy: "Energy Consumption",
@@ -105,7 +123,25 @@ const COPY = {
     placeholder: "பிரிக்ஸியிடம் கேளுங்கள்…",
     send: "அனுப்பு",
     sectorsLabel: "தொழிற்சாலை பிரிவுகள்",
+    addSector: "பிரிவைச் சேர்",
     sectorTag: "பிரிவு",
+    addSectorModalTitle: "புதிய பிரிவு",
+    addSectorModalSub: "பிரிவை அமைக்கும் முன் தொழிற்சாலை பற்றி கூறுங்கள்.",
+    industryName: "தொழில் பெயர்",
+    industryNamePh: "உதா. லீஃபோரா டெக்ஸ்டைல்ஸ்",
+    factoryName: "தொழிற்சாலை பெயர்",
+    factoryNamePh: "உதா. யூனிட் 3 — கோயம்புத்தூர்",
+    factoryLocation: "தொழிற்சாலை இடம்",
+    factoryLocationPh: "உதா. கோயம்புத்தூர், தமிழ்நாடு",
+    industryType: "தொழில் வகை",
+    industryTypePh: "தொழில் வகையைத் தேர்ந்தெடுக்கவும்",
+    industryTypes: ["டெக்ஸ்டைல்", "உணவு பதப்படுத்துதல்", "மருந்துகள்", "ஆட்டோமொபைல்", "இரசாயனங்கள்", "எலக்ட்ரானிக்ஸ்", "மற்றவை"],
+    logoUpload: "தொழிற்சாலை லோகோ",
+    logoUploadHint: "PNG அல்லது JPG, 5MB வரை",
+    logoChange: "லோகோவை மாற்று",
+    logoRemove: "அகற்று",
+    cancel: "ரத்து செய்",
+    next: "அடுத்து",
     alerts: "எச்சரிக்கைகள்",
     inventory: "கையிருப்பு",
     energy: "மின் நுகர்வு",
@@ -299,23 +335,6 @@ function GrowthRingGauge({ score = 87 }) {
   );
 }
 
-function Sparkline({ values, color }) {
-  const w = 100, h = 28;
-  const max = Math.max(...values), min = Math.min(...values);
-  const pts = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * w;
-      const y = h - ((v - min) / (max - min || 1)) * h;
-      return `${x},${y}`;
-    })
-    .join(" ");
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ display: "block" }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function LeafMark({ size = 34 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
@@ -332,6 +351,21 @@ function LeafMark({ size = 34 }) {
   );
 }
 
+/* small folder-style glyph for the compact sector cards */
+function SectorGlyph({ color }) {
+  return (
+    <svg width="30" height="24" viewBox="0 0 30 24" fill="none">
+      <path
+        d="M2 5.5c0-1.4 1.1-2.5 2.5-2.5h6l2.4 2.6h12.6c1.4 0 2.5 1.1 2.5 2.5v11.4c0 1.4-1.1 2.5-2.5 2.5h-21C3.1 21.5 2 20.4 2 19V5.5Z"
+        fill={color}
+        opacity="0.16"
+        stroke={color}
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
 export default function PrixiDashboard() {
   const navigate = useNavigate();
   const [lang, setLang] = useState("en");
@@ -339,6 +373,15 @@ export default function PrixiDashboard() {
   const [optimizerOpen, setOptimizerOpen] = useState(false);
   const [chatValue, setChatValue] = useState("");
   const [chatLog, setChatLog] = useState([]);
+  const [addSectorOpen, setAddSectorOpen] = useState(false);
+  const [newSector, setNewSector] = useState({
+    industryName: "",
+    factoryName: "",
+    factoryLocation: "",
+    industryType: "",
+    logoFile: null,
+    logoPreview: "",
+  });
   const t = COPY[lang];
 
   const topStats = useMemo(
@@ -367,6 +410,54 @@ export default function PrixiDashboard() {
     if (!chatValue.trim()) return;
     setChatLog((log) => [...log, { role: "user", text: chatValue }]);
     setChatValue("");
+  }
+
+  function openAddSector() {
+    setNewSector({
+      industryName: "",
+      factoryName: "",
+      factoryLocation: "",
+      industryType: "",
+      logoFile: null,
+      logoPreview: "",
+    });
+    setAddSectorOpen(true);
+  }
+
+  function closeAddSector() {
+    setAddSectorOpen(false);
+  }
+
+  function updateNewSector(field, value) {
+    setNewSector((s) => ({ ...s, [field]: value }));
+  }
+
+  function handleLogoChange(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewSector((s) => ({ ...s, logoFile: file, logoPreview: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeLogo() {
+    setNewSector((s) => ({ ...s, logoFile: null, logoPreview: "" }));
+  }
+
+  const isNewSectorValid =
+    newSector.industryName.trim() &&
+    newSector.factoryName.trim() &&
+    newSector.factoryLocation.trim() &&
+    newSector.industryType.trim();
+
+  function handleNewSectorNext() {
+    if (!isNewSectorValid) return;
+    // First step of the "add sector" flow is captured here.
+    // Hand off to the sector-creation route with the collected details.
+    setAddSectorOpen(false);
+    navigate("/sectors/new", { state: { sectorDraft: newSector } });
   }
 
   return (
@@ -499,19 +590,19 @@ export default function PrixiDashboard() {
         .sidebar-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 7px;
         }
 
-        /* unified pill button — same look for every sidebar item */
+        /* unified pill button — same compact, heading-only look for every sidebar item */
         .sidebar-btn {
           all: unset;
           box-sizing: border-box;
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           width: 100%;
-          padding: 14px 16px;
-          border-radius: 16px;
+          padding: 10px 13px;
+          border-radius: 11px;
           background: var(--bg-panel-raised);
           border: 1px solid transparent;
           cursor: pointer;
@@ -520,58 +611,49 @@ export default function PrixiDashboard() {
         }
         .sidebar-btn:hover { background: var(--sage); }
         .sidebar-btn:hover .sidebar-btn-label,
-        .sidebar-btn:hover .sidebar-btn-icon,
-        .sidebar-btn:hover .metric-value { color: #fff; }
+        .sidebar-btn:hover .sidebar-btn-icon { color: #fff; }
         .sidebar-btn.active {
           background: var(--forest);
           box-shadow: 0 0 0 2px rgba(201,168,106,0.35);
         }
         .sidebar-btn.active .sidebar-btn-label,
         .sidebar-btn.active .sidebar-btn-icon,
-        .sidebar-btn.active .metric-value,
         .sidebar-btn.active .sidebar-chevron { color: var(--oat); }
 
         .sidebar-btn-icon {
-          width: 22px; height: 22px; flex-shrink: 0;
+          width: 18px; height: 18px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
           color: var(--forest);
           transition: color 0.15s;
         }
-        .sidebar-btn-icon svg { width: 19px; height: 19px; }
+        .sidebar-btn-icon svg { width: 16px; height: 16px; }
 
         .sidebar-btn-label {
           font-family: 'Inter', sans-serif;
-          font-size: 15px;
+          font-size: 12.5px;
           font-weight: 700;
           color: var(--forest);
           transition: color 0.15s;
           line-height: 1.25;
+          flex: 1;
         }
-        .sidebar-btn-nav { justify-content: flex-start; }
-        .sidebar-btn-nav .sidebar-btn-label { flex: 1; }
 
-        .sidebar-btn-metric { align-items: flex-start; }
-        .sidebar-btn-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
-        .sidebar-btn-meta { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-        .metric-value { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 600; color: var(--ink-primary); transition: color 0.15s; }
-        .metric-sub { font-size: 10.5px; }
-
-        .sidebar-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--forest); transition: transform 0.2s, color 0.15s; }
+        .sidebar-chevron { width: 14px; height: 14px; flex-shrink: 0; color: var(--forest); transition: transform 0.2s, color 0.15s; }
         .sidebar-chevron.open { transform: rotate(180deg); }
 
-        .sidebar-dropdown-wrap { display: flex; flex-direction: column; gap: 6px; }
+        .sidebar-dropdown-wrap { display: flex; flex-direction: column; gap: 4px; }
         .sidebar-dropdown-panel {
-          display: flex; flex-direction: column; gap: 4px;
-          padding: 6px 8px 2px 44px;
+          display: flex; flex-direction: column; gap: 3px;
+          padding: 5px 6px 2px 38px;
         }
         .sidebar-dropdown-item {
           all: unset;
           box-sizing: border-box;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 500;
           color: var(--ink-muted);
-          padding: 7px 10px;
-          border-radius: 8px;
+          padding: 6px 9px;
+          border-radius: 7px;
           cursor: pointer;
           transition: background 0.15s, color 0.15s;
         }
@@ -676,60 +758,94 @@ export default function PrixiDashboard() {
           background: var(--border-soft);
         }
         .sectors-col { display: flex; flex-direction: column; min-height: 0; }
+
+        /* sector cards — responsive grid so tiles fill the row evenly instead of
+           wrapping into an awkward leftover gap */
         .lines-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: 1fr 1fr;
+          grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
           gap: 14px;
-          min-height: 0;
-          flex: 1;
         }
         .line-card {
-          padding: 16px;
+          padding: 18px 16px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          align-items: flex-start;
+          justify-content: flex-start;
+          gap: 12px;
+          min-height: 128px;
+          text-align: left;
           border: 1px solid var(--border-soft);
-          border-left: 4px solid var(--gold);
+          border-top: 3px solid var(--gold);
           background: linear-gradient(160deg, #fbf8ef 0%, var(--bg-panel) 65%);
         }
-        .line-card-clickable { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
+        .line-card-clickable { cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s; }
         .line-card-clickable:hover, .line-card-clickable:focus-visible {
           border-color: var(--forest);
           box-shadow: 0 4px 14px rgba(31,61,46,0.12);
+          transform: translateY(-2px);
           outline: none;
         }
-        .line-head { display: flex; align-items: center; justify-content: space-between; }
-        .sector-tag {
+        .line-card-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+        }
+        .line-status {
           font-size: 9.5px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--gold);
           font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 2px 7px;
+          border-radius: 5px;
+          background: rgba(31,61,46,0.06);
         }
         .line-title {
           font-family: 'Fraunces', serif;
-          font-size: 21px;
+          font-size: 16px;
           font-weight: 700;
-          display: inline-block;
-          width: fit-content;
           color: var(--forest);
-          background: rgba(201,168,106,0.18);
-          padding: 2px 10px;
-          border-radius: 7px;
-          margin-top: 2px;
+          line-height: 1.25;
         }
-        .status-pill {
-          font-size: 10.5px; padding: 3px 9px; border-radius: 999px; font-weight: 600;
+        .line-metric {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          width: 100%;
+          margin-top: auto;
+          padding-top: 10px;
+          border-top: 1px dashed var(--border-soft);
+        }
+        .line-metric-label { font-size: 10.5px; color: var(--ink-muted); }
+        .line-metric-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--ink-primary); }
+
+        /* "add sector" tile — same footprint as a line-card, dashed & quiet */
+        .add-sector-card {
+          border: 1.5px dashed var(--border-soft);
+          border-top: 1.5px dashed var(--border-soft);
+          background: transparent;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          color: var(--ink-muted);
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .add-sector-card:hover, .add-sector-card:focus-visible {
+          border-color: var(--gold);
+          color: var(--forest);
+          background: rgba(201,168,106,0.08);
+          transform: none;
+          box-shadow: none;
+          outline: none;
+        }
+        .add-sector-icon { width: 24px; height: 24px; margin-bottom: 2px; }
+        .add-sector-label {
+          font-size: 12px;
+          font-weight: 700;
           letter-spacing: 0.02em;
         }
-        .line-metrics { display: flex; flex-direction: column; gap: 5px; }
-        .line-metric-row {
-          display: flex; justify-content: space-between; font-size: 12px;
-        }
-        .line-metric-row span:first-child { color: var(--ink-muted); }
-        .line-metric-row span:last-child { font-family: 'JetBrains Mono', monospace; }
-        .line-spark { margin-top: auto; }
 
         /* right panel */
         .right-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
@@ -759,6 +875,147 @@ export default function PrixiDashboard() {
         .inv-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
         .inv-bar-track { height: 5px; border-radius: 4px; background: var(--bg-panel-raised); overflow: hidden; }
         .inv-bar-fill { height: 100%; border-radius: 4px; background: var(--status-good); }
+
+        /* add-sector modal */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(31,61,46,0.42);
+          backdrop-filter: blur(2px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+          padding: 20px;
+        }
+        .modal-panel {
+          width: 100%;
+          max-width: 440px;
+          max-height: 88vh;
+          overflow-y: auto;
+          background: var(--bg-panel);
+          border: 1px solid var(--border-soft);
+          border-radius: 16px;
+          box-shadow: 0 18px 50px rgba(31,61,46,0.28);
+          padding: 22px 22px 18px;
+        }
+        .modal-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .modal-head h3 {
+          margin: 0 0 4px 0;
+          font-family: 'Fraunces', serif;
+          font-size: 19px;
+          font-weight: 700;
+          color: var(--forest);
+        }
+        .modal-sub { margin: 0; font-size: 12px; color: var(--ink-muted); line-height: 1.4; }
+        .modal-close {
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: var(--ink-muted);
+          padding: 4px;
+          border-radius: 6px;
+          flex-shrink: 0;
+          transition: color 0.15s, background 0.15s;
+        }
+        .modal-close:hover { color: var(--forest); background: rgba(31,61,46,0.06); }
+        .modal-close svg { width: 18px; height: 18px; display: block; }
+        .modal-form { display: flex; flex-direction: column; gap: 14px; }
+        .form-row { display: flex; flex-direction: column; gap: 6px; }
+        .form-row label {
+          font-size: 11.5px;
+          font-weight: 600;
+          color: var(--forest);
+          letter-spacing: 0.01em;
+        }
+        .form-row input,
+        .form-row select {
+          background: #fffdf7;
+          border: 1px solid var(--border-soft);
+          border-radius: 9px;
+          padding: 9px 11px;
+          font-size: 13px;
+          color: var(--ink-primary);
+          outline: none;
+          transition: border-color 0.15s;
+        }
+        .form-row input::placeholder { color: #a9b3a2; }
+        .form-row input:focus, .form-row select:focus { border-color: var(--gold); }
+        .form-row select { cursor: pointer; }
+        .logo-upload { display: flex; align-items: center; gap: 12px; }
+        .logo-dropzone {
+          width: 64px;
+          height: 64px;
+          flex-shrink: 0;
+          border: 1.5px dashed var(--border-soft);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--ink-muted);
+          cursor: pointer;
+          overflow: hidden;
+          background: #fffdf7;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        .logo-dropzone:hover { border-color: var(--gold); color: var(--forest); }
+        .logo-dropzone svg { width: 24px; height: 24px; }
+        .logo-preview { width: 100%; height: 100%; object-fit: cover; }
+        .logo-upload-side { display: flex; flex-direction: column; gap: 6px; }
+        .logo-hint { font-size: 10.5px; color: var(--ink-muted); }
+        .logo-remove-btn {
+          align-self: flex-start;
+          background: transparent;
+          border: none;
+          color: var(--status-bad);
+          font-size: 11px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0;
+        }
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 6px;
+          padding-top: 14px;
+          border-top: 1px dashed var(--border-soft);
+        }
+        .modal-btn-secondary {
+          background: transparent;
+          border: 1px solid var(--border-soft);
+          border-radius: 9px;
+          padding: 9px 16px;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: var(--ink-muted);
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        .modal-btn-secondary:hover { border-color: var(--forest); color: var(--forest); }
+        .modal-btn-primary {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--forest);
+          border: none;
+          border-radius: 9px;
+          padding: 9px 16px;
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--oat);
+          cursor: pointer;
+          transition: opacity 0.15s, transform 0.15s;
+        }
+        .modal-btn-primary svg { width: 14px; height: 14px; }
+        .modal-btn-primary:hover:not(:disabled) { transform: translateX(1px); }
+        .modal-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
       `}</style>
 
       {/* TOP BAR */}
@@ -818,7 +1075,7 @@ export default function PrixiDashboard() {
                 return (
                   <div className="sidebar-dropdown-wrap" key={item.key}>
                     <button
-                      className={`sidebar-btn sidebar-btn-nav ${optimizerOpen ? "active" : ""}`}
+                      className={`sidebar-btn ${optimizerOpen ? "active" : ""}`}
                       onClick={() => setOptimizerOpen((v) => !v)}
                       aria-expanded={optimizerOpen}
                     >
@@ -851,44 +1108,18 @@ export default function PrixiDashboard() {
                 );
               }
 
-              if (item.type === "nav") {
-                return (
-                  <button
-                    key={item.key}
-                    className={`sidebar-btn sidebar-btn-nav ${activeNav === item.key ? "active" : ""}`}
-                    onClick={() => setActiveNav(item.key)}
-                  >
-                    <span className="sidebar-btn-icon">
-                      <svg viewBox="0 0 24 24" fill="none">{icon}</svg>
-                    </span>
-                    <span className="sidebar-btn-label">{item.label}</span>
-                  </button>
-                );
-              }
-
+              // Every remaining item — nav or metric — renders as the same
+              // compact, heading-only pill: icon + label, no values.
               return (
                 <button
                   key={item.key}
-                  className={`sidebar-btn sidebar-btn-metric ${activeNav === item.key ? "active" : ""}`}
+                  className={`sidebar-btn ${activeNav === item.key ? "active" : ""}`}
                   onClick={() => setActiveNav(item.key)}
                 >
                   <span className="sidebar-btn-icon">
                     <svg viewBox="0 0 24 24" fill="none">{icon}</svg>
                   </span>
-                  <span className="sidebar-btn-body">
-                    <span className="sidebar-btn-label">{item.label}</span>
-                    <span className="sidebar-btn-meta">
-                      <span className="metric-value">{item.value}</span>
-                      {item.sub && (
-                        <span
-                          className={`metric-sub ${item.tone ? "tone-" + item.tone : ""}`}
-                          style={!item.tone ? { color: "var(--ink-muted)" } : undefined}
-                        >
-                          {item.sub}
-                        </span>
-                      )}
-                    </span>
-                  </span>
+                  <span className="sidebar-btn-label">{item.label}</span>
                 </button>
               );
             })}
@@ -947,45 +1178,42 @@ export default function PrixiDashboard() {
           <div className="lines-grid">
             {SECTORS.map((line) => {
               const route = SECTOR_ROUTES[line.key];
+              const topMetric = line.metrics[0];
               return (
-              <div
-                className={`panel line-card ${route ? "line-card-clickable" : ""}`}
-                key={line.key}
-                onClick={route ? () => navigate(route) : undefined}
-                role={route ? "button" : undefined}
-                tabIndex={route ? 0 : undefined}
-                onKeyDown={route ? (e) => (e.key === "Enter" || e.key === " ") && navigate(route) : undefined}
-              >
-                <div className="line-head">
-                  <div>
-                    <div className="sector-tag">{t.sectorTag}</div>
-                    <div className="line-title">{line.title}</div>
+                <div
+                  className={`panel line-card ${route ? "line-card-clickable" : ""}`}
+                  key={line.key}
+                  style={{ borderTopColor: toneColor(line.tone) }}
+                  onClick={route ? () => navigate(route) : undefined}
+                  role={route ? "button" : undefined}
+                  tabIndex={route ? 0 : undefined}
+                  onKeyDown={route ? (e) => (e.key === "Enter" || e.key === " ") && navigate(route) : undefined}
+                >
+                  <div className="line-card-top">
+                    <SectorGlyph color={toneColor(line.tone)} />
+                    <span className="line-status" style={{ color: toneColor(line.tone) }}>{line.status}</span>
                   </div>
-                  <div
-                    className="status-pill"
-                    style={{
-                      color: toneColor(line.tone),
-                      background: "rgba(31,61,46,0.06)",
-                      border: `1px solid ${toneColor(line.tone)}55`,
-                    }}
-                  >
-                    {line.status}
+                  <div className="line-title">{line.title}</div>
+                  <div className="line-metric">
+                    <span className="line-metric-label">{topMetric.label}</span>
+                    <span className="line-metric-value">{topMetric.value}</span>
                   </div>
                 </div>
-                <div className="line-metrics">
-                  {line.metrics.map((m, i) => (
-                    <div className="line-metric-row" key={i}>
-                      <span>{m.label}</span>
-                      <span>{m.value}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="line-spark">
-                  <Sparkline values={line.spark} color={toneColor(line.tone)} />
-                </div>
-              </div>
               );
             })}
+
+            <div
+              className="panel line-card add-sector-card"
+              onClick={openAddSector}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && openAddSector()}
+            >
+              <svg className="add-sector-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <div className="add-sector-label">{t.addSector}</div>
+            </div>
           </div>
         </div>
 
@@ -1045,6 +1273,132 @@ export default function PrixiDashboard() {
           </div>
         </div>
       </div>
+
+      {addSectorOpen && (
+        <div
+          className="modal-overlay"
+          onClick={closeAddSector}
+          role="presentation"
+        >
+          <div
+            className="modal-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-sector-title"
+          >
+            <div className="modal-head">
+              <div>
+                <h3 id="add-sector-title">{t.addSectorModalTitle}</h3>
+                <p className="modal-sub">{t.addSectorModalSub}</p>
+              </div>
+              <button className="modal-close" onClick={closeAddSector} aria-label={t.cancel}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form
+              className="modal-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleNewSectorNext();
+              }}
+            >
+              <div className="form-row">
+                <label htmlFor="industryName">{t.industryName}</label>
+                <input
+                  id="industryName"
+                  type="text"
+                  value={newSector.industryName}
+                  placeholder={t.industryNamePh}
+                  onChange={(e) => updateNewSector("industryName", e.target.value)}
+                />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="factoryName">{t.factoryName}</label>
+                <input
+                  id="factoryName"
+                  type="text"
+                  value={newSector.factoryName}
+                  placeholder={t.factoryNamePh}
+                  onChange={(e) => updateNewSector("factoryName", e.target.value)}
+                />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="factoryLocation">{t.factoryLocation}</label>
+                <input
+                  id="factoryLocation"
+                  type="text"
+                  value={newSector.factoryLocation}
+                  placeholder={t.factoryLocationPh}
+                  onChange={(e) => updateNewSector("factoryLocation", e.target.value)}
+                />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="industryType">{t.industryType}</label>
+                <select
+                  id="industryType"
+                  value={newSector.industryType}
+                  onChange={(e) => updateNewSector("industryType", e.target.value)}
+                >
+                  <option value="" disabled>{t.industryTypePh}</option>
+                  {t.industryTypes.map((opt) => (
+                    <option value={opt} key={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-row">
+                <label>{t.logoUpload}</label>
+                <div className="logo-upload">
+                  <label className="logo-dropzone" htmlFor="logoInput">
+                    {newSector.logoPreview ? (
+                      <img src={newSector.logoPreview} alt="" className="logo-preview" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 16V4M12 4 7 9M12 4l5 5" />
+                        <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+                      </svg>
+                    )}
+                  </label>
+                  <input
+                    id="logoInput"
+                    type="file"
+                    accept="image/png, image/jpeg"
+                    onChange={handleLogoChange}
+                    style={{ display: "none" }}
+                  />
+                  <div className="logo-upload-side">
+                    <span className="logo-hint">{t.logoUploadHint}</span>
+                    {newSector.logoPreview && (
+                      <button type="button" className="logo-remove-btn" onClick={removeLogo}>
+                        {t.logoRemove}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="modal-btn-secondary" onClick={closeAddSector}>
+                  {t.cancel}
+                </button>
+                <button type="submit" className="modal-btn-primary" disabled={!isNewSectorValid}>
+                  {t.next}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
